@@ -73,8 +73,25 @@ role addendum, so identity and boundaries are uniform.
 
 - **Core (always loaded):** `remy/identity/MEMORY.md`, appended via the
   `remember_fact(durable=True)` tool.
-- **Episodic:** JSONL + Chroma collection under `remy_data/memory/`;
-  `recall_memory` queries semantically, degrading to keyword scoring.
+- **Tiered self-pruning store** (`remy/memory/tiered.py`), under
+  `remy_data/memory/`:
+  - `ACTIVE_MEMORY.md` — hot episodic entries, recent tail injected into
+    every system prompt.
+  - `SEMANTIC_FACTS.jsonl` — extracted knowledge with decay scoring
+    (`confidence × 0.5^(days_since_referenced/14) × reference bonus`);
+    recall refreshes the decay clock, so used facts stay hot.
+  - `MEMORY_STATE.json` — sizes, counts, last compression report.
+  - `.memory_archive/` — gzip archives of summarized episodes and decayed
+    facts; recall falls back here when the hot tier comes up short.
+  - **Pinning:** facts marked `pinned` (deadlines, goals, preferences) never
+    decay and are always in the prompt (`pin_memory` tool).
+  - **Compression** (heartbeat-triggered when active memory >500KB or
+    episodes >7 days old; runs on a background thread so it never blocks
+    replies): summarizes old episodes into a fact (LLM or extractive
+    fallback), archives facts scoring <0.3, merges duplicates, resolves
+    "X"/"not X" contradictions in favour of the newer fact.
+- **Episodic vector index:** Chroma collection (keyword fallback) kept in
+  sync by `remember_fact` for semantic recall.
 - **Conversation:** chat turns persist to `remy_data/chat_history.jsonl` and
   reload on restart (last 200 turns), so REMY picks up where it left off.
 

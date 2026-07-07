@@ -32,6 +32,7 @@ TOOL_TIERS: dict[str, RiskTier] = {
     "list_scheduled_tasks": RiskTier.AUTO,
     "get_personality_settings": RiskTier.AUTO,
     "recall_memory": RiskTier.AUTO,
+    "memory_status": RiskTier.AUTO,
     "capture_screen": RiskTier.AUTO,
     "describe_screen": RiskTier.AUTO,
     "list_open_apps": RiskTier.AUTO,
@@ -47,6 +48,7 @@ TOOL_TIERS: dict[str, RiskTier] = {
     "schedule_task": RiskTier.LOGGED,
     "cancel_scheduled_task": RiskTier.LOGGED,
     "remember_fact": RiskTier.LOGGED,
+    "pin_memory": RiskTier.LOGGED,
     "set_personality_trait": RiskTier.LOGGED,
 
     # ── high-risk: explicit user approval, every time ──

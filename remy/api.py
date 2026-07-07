@@ -76,8 +76,17 @@ def state():
         "tasks": tasks.list_tasks(),
         "heartbeat": heartbeat.last_status(),
         "heartbeat_minutes": config.HEARTBEAT_MINUTES,
+        "memory": _memory_state(),
         "audit": audit.read_recent(40),
     }
+
+
+def _memory_state() -> dict:
+    try:
+        from remy.memory.tiered import get_memory
+        return get_memory().state()
+    except Exception as exc:
+        return {"error": str(exc)}
 
 
 # ── approvals ────────────────────────────────────────────────────────

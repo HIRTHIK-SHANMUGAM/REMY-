@@ -84,6 +84,17 @@ def run_cycle() -> dict:
         for task_id in decision.get("due_task_ids", []):
             tasks.mark_ran(task_id)
 
+        # Memory upkeep: queue async compression when thresholds hit
+        # (>500KB active memory or episodes older than 7 days). Runs on a
+        # background thread so it never blocks agent responses.
+        try:
+            from remy.memory import tiered
+            needed, why = tiered.get_memory().needs_compression()
+            if needed and tiered.queue_compression(actor="heartbeat"):
+                results.append(f"memory compression queued: {why}")
+        except Exception as exc:
+            results.append(f"memory check failed: {exc}")
+
         summary = {
             "ts": started,
             "assessment": decision.get("assessment", ""),

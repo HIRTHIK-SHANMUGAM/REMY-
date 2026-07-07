@@ -40,6 +40,13 @@ def build_system_prompt(role_addendum: str = "") -> str:
     """
     parts = [_read(name) for name in IDENTITY_FILES]
     parts.append(get_personality().render_prompt_section())
+    try:
+        from remy.memory.tiered import get_memory
+        section = get_memory().render_prompt_section()
+        if section.count("\n"):  # skip the bare header when memory is empty
+            parts.append(section)
+    except Exception:
+        pass  # memory must never break prompt assembly
     if role_addendum:
         parts.append(role_addendum.strip())
     return "\n\n---\n\n".join(parts)

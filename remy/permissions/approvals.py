@@ -95,10 +95,25 @@ def resolve(req_id: str, approve: bool) -> bool:
 
 
 def wait_for_verdict(req_id: str, timeout_s: float = DEFAULT_TIMEOUT_S) -> str:
-    """Block until the user decides, or expire (= denied) after timeout."""
+    """
+    Block until the user decides, or expire (= denied) after timeout.
+
+    Polls the approvals file as well as the in-process event: the verdict may
+    be written by a different process (the dashboard API) than the one whose
+    tool call is blocked here (e.g. the MCP server serving the voice agent).
+    """
+    import time
+    deadline = time.monotonic() + timeout_s
     ev = _events.get(req_id)
-    if ev is not None:
-        ev.wait(timeout_s)
+    while time.monotonic() < deadline:
+        if ev is not None and ev.wait(2.0):
+            break
+        if ev is None:
+            time.sleep(2.0)
+        with _lock:
+            status = _load().get(req_id, {}).get("status", "denied")
+        if status != "pending":
+            return status
     with _lock:
         data = _load()
         req = data.get(req_id)

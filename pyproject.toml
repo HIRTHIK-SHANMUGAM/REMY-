@@ -33,6 +33,7 @@ desktop = [
     "pyautogui",
     "mss",
     "pillow",
+    "pytesseract",
 ]
 dev = [
     "pytest",

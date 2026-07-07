@@ -75,6 +75,8 @@ role addendum, so identity and boundaries are uniform.
   `remember_fact(durable=True)` tool.
 - **Episodic:** JSONL + Chroma collection under `remy_data/memory/`;
   `recall_memory` queries semantically, degrading to keyword scoring.
+- **Conversation:** chat turns persist to `remy_data/chat_history.jsonl` and
+  reload on restart (last 200 turns), so REMY picks up where it left off.
 
 ## Personality
 
@@ -84,11 +86,9 @@ Adjustable from dashboard sliders, chat ("set sarcasm to 70%"), the
 `set_personality_trait` tool, or `POST /api/personality`. Explicitly scoped:
 dials shape expression, never permissions.
 
-## Deferred / known gaps
+## Known gaps
 
-- Tauri shell is written but not compiled in CI here (needs platform
-  webview toolchains); dev-run instructions in `desktop/README.md`.
-- `describe_screen` OCR path uses the Claude vision model; no local OCR yet.
-- Voice pipeline still requires LiveKit cloud credentials (as inherited).
-- Single-user chat history is in-memory per process (resets on restart);
-  durable conversation logging is a natural next step.
+- Voice pipeline still requires LiveKit cloud credentials (as inherited from
+  the FRIDAY foundation); a fully local STT/TTS path is future work.
+- Release bundles (`cargo tauri build`) must be produced on each target OS;
+  CI currently runs the Python test suite on Linux/Windows/macOS.

@@ -38,12 +38,53 @@ DELEGATE_TOOL = {
 
 MAX_STEPS = 10
 
-# Conversation history for the single-user chat session
-_history: list[dict] = []
+# Conversation history — durable across restarts (plain text turns only;
+# tool-use exchanges stay within a single handle_message call).
+HISTORY_FILE = None
+
+
+def _history_file():
+    global HISTORY_FILE
+    if HISTORY_FILE is None:
+        from remy.config import DATA_DIR
+        HISTORY_FILE = DATA_DIR / "chat_history.jsonl"
+    return HISTORY_FILE
+
+
+def _load_history(limit: int = 200) -> list[dict]:
+    import json
+    path = _history_file()
+    if not path.exists():
+        return []
+    turns = []
+    for line in path.read_text(encoding="utf-8").splitlines()[-limit:]:
+        try:
+            turn = json.loads(line)
+            if turn.get("role") in ("user", "assistant") and isinstance(
+                    turn.get("content"), str):
+                turns.append({"role": turn["role"], "content": turn["content"]})
+        except json.JSONDecodeError:
+            continue
+    return turns
+
+
+def _persist_turn(role: str, content: str) -> None:
+    import json
+    path = _history_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps({"role": role, "content": content},
+                           ensure_ascii=False) + "\n")
+
+
+_history: list[dict] = _load_history()
 
 
 def reset_history() -> None:
     _history.clear()
+    path = _history_file()
+    if path.exists():
+        path.unlink()
 
 
 def handle_message(user_message: str) -> str:
@@ -55,7 +96,8 @@ def handle_message(user_message: str) -> str:
         tools = [DELEGATE_TOOL]
 
     _history.append({"role": "user", "content": user_message})
-    messages = _history[-40:]  # bounded context
+    _persist_turn("user", user_message)
+    messages = _history[-40:]  # bounded context (slice = working copy)
 
     try:
         for _ in range(MAX_STEPS):
@@ -65,6 +107,7 @@ def handle_message(user_message: str) -> str:
             text = "".join(b.text for b in resp.content if b.type == "text")
             if not tool_uses:
                 _history.append({"role": "assistant", "content": text})
+                _persist_turn("assistant", text)
                 return text
 
             messages.append({"role": "assistant", "content": resp.content})
@@ -82,6 +125,7 @@ def handle_message(user_message: str) -> str:
 
         final = "I hit my step limit mid-task — here's where things stand; ask me to continue."
         _history.append({"role": "assistant", "content": final})
+        _persist_turn("assistant", final)
         return final
 
     except base.LLMUnavailable as exc:

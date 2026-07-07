@@ -45,7 +45,10 @@ def register(mcp, guard):
 
     @mcp.tool()
     def describe_screen() -> str:
-        """Screenshot the display and describe what's visible using the vision model."""
+        """
+        Screenshot the display and describe what's visible — vision model when
+        configured, local OCR (pytesseract) as an offline fallback.
+        """
         def impl() -> str:
             shots_dir = config.ALLOWED_DIRS[0] / "screenshots"
             shots_dir.mkdir(parents=True, exist_ok=True)
@@ -55,6 +58,22 @@ def register(mcp, guard):
                 from remy.agents.base import describe_image
                 description = describe_image(path)
             except Exception as exc:
-                description = f"(vision model unavailable: {exc})"
+                description = _local_ocr(path, str(exc))
             return f"Screenshot: {path}\n\n{description}"
         return guard(impl, "describe_screen")()
+
+
+def _local_ocr(path: str, vision_error: str) -> str:
+    """Offline fallback: extract visible text with pytesseract if present."""
+    try:
+        import pytesseract
+        from PIL import Image
+        text = pytesseract.image_to_string(Image.open(path)).strip()
+        if text:
+            return ("(vision model unavailable — local OCR text follows)\n"
+                    + text[:4000])
+        return "(vision model unavailable; local OCR found no readable text)"
+    except Exception:
+        return (f"(vision model unavailable: {vision_error}; install "
+                'pytesseract + tesseract for offline OCR: '
+                'pip install "remy[desktop]")')

@@ -36,6 +36,21 @@ DELEGATE_TOOL = {
     },
 }
 
+DELEGATE_BROWSER_TOOL = {
+    "name": "delegate_to_browser",
+    "description": ("Hand a web task to the browser sub-agent (Playwright: "
+                    "navigate, read pages, fill forms, screenshots). Use for "
+                    "anything requiring a real website — searching flights, "
+                    "checking prices, filling forms. Give a precise, "
+                    "self-contained instruction including the target site if "
+                    "known; synthesize its structured report for the user."),
+    "input_schema": {
+        "type": "object",
+        "properties": {"instruction": {"type": "string"}},
+        "required": ["instruction"],
+    },
+}
+
 MAX_STEPS = 10
 
 # Conversation history — durable across restarts (plain text turns only;
@@ -91,9 +106,9 @@ def handle_message(user_message: str) -> str:
     """Main chat entry point used by the API/dashboard."""
     system = build_system_prompt(ROLE)
     try:
-        tools = toolbox.mcp_tool_schemas() + [DELEGATE_TOOL]
+        tools = toolbox.mcp_tool_schemas() + [DELEGATE_TOOL, DELEGATE_BROWSER_TOOL]
     except Exception:
-        tools = [DELEGATE_TOOL]
+        tools = [DELEGATE_TOOL, DELEGATE_BROWSER_TOOL]
 
     _history.append({"role": "user", "content": user_message})
     _persist_turn("user", user_message)
@@ -116,6 +131,10 @@ def handle_message(user_message: str) -> str:
                 if tu.name == "delegate_to_executor":
                     from remy.agents import executor
                     output = executor.run_task(
+                        (tu.input or {}).get("instruction", ""))
+                elif tu.name == "delegate_to_browser":
+                    from remy.agents import browser_agent
+                    output = browser_agent.run_browser_task(
                         (tu.input or {}).get("instruction", ""))
                 else:
                     output = toolbox.call_tool(tu.name, tu.input or {})

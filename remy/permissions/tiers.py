@@ -36,6 +36,11 @@ TOOL_TIERS: dict[str, RiskTier] = {
     "capture_screen": RiskTier.AUTO,
     "describe_screen": RiskTier.AUTO,
     "list_open_apps": RiskTier.AUTO,
+    "extract_text": RiskTier.AUTO,
+    "get_page_links": RiskTier.AUTO,
+    "wait_for_element": RiskTier.AUTO,
+    "get_current_url": RiskTier.AUTO,
+    "screenshot_and_describe": RiskTier.AUTO,
 
     # ── writes inside the allowlist / benign local actions ──
     "write_file": RiskTier.LOGGED,
@@ -49,6 +54,12 @@ TOOL_TIERS: dict[str, RiskTier] = {
     "cancel_scheduled_task": RiskTier.LOGGED,
     "remember_fact": RiskTier.LOGGED,
     "pin_memory": RiskTier.LOGGED,
+    # browser: engine escalates navigate_to on auth/financial URL patterns;
+    # form fills and clicks are always audited with full args
+    "navigate_to": RiskTier.LOGGED,
+    "fill_form": RiskTier.LOGGED,
+    "click_element": RiskTier.LOGGED,
+    "record_task_outcome": RiskTier.LOGGED,
     "set_personality_trait": RiskTier.LOGGED,
 
     # ── high-risk: explicit user approval, every time ──

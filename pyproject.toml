@@ -28,6 +28,10 @@ llm = [
 memory = [
     "chromadb>=0.5",
 ]
+# Browser automation (run `playwright install chromium` after installing)
+browser = [
+    "playwright>=1.45",
+]
 # Desktop control extras (screen capture, OCR, input automation)
 desktop = [
     "pyautogui",

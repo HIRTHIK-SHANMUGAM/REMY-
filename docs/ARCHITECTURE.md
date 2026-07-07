@@ -62,8 +62,25 @@ tools default to REQUIRES_APPROVAL.
 |---|---|---|---|
 | Orchestrator | claude-fable-5 | user conversation, decomposition, delegation | bounded 10-step tool loop |
 | Executor | claude-sonnet-5 | concrete delegated tasks | bounded 8-step loop, temp 0.2 |
+| Browser agent | claude-sonnet-5 | delegated web tasks (search, forms, bookings) | browser tool subset only, 12-step loop |
 | Watcher | claude-haiku / ollama:* | heartbeat judgment | strict-JSON decisions, coded fallback |
 | Reviewer | claude-sonnet-5 | advisory gate on autonomous work | temp 0, rejects on doubt or unavailability |
+
+### Browser automation (`remy/tools/browser.py`)
+
+Playwright Chromium owned by a single dedicated thread (sync API is neither
+event-loop- nor thread-safe); tools submit closures and wait. Safeguards:
+- `navigate_to` to auth/financial URL patterns (`*google.com/accounts*`,
+  `*github.com/login*`, `*bank*`, `*paypal.com*`) escalates to user approval
+  in the permission engine.
+- First visit to any new domain is audit-logged and the user notified.
+- Form fills/clicks are audited with full args; every action also lands in
+  ACTIVE_MEMORY, and `record_task_outcome` stores completed bookings/
+  submissions as 0.95-confidence semantic facts.
+- `screenshot_and_describe` only calls the vision model when
+  `is_visual_blocking=true` (token cost gate).
+The Orchestrator delegates web tasks via `delegate_to_browser` (e.g. "find a
+flight to Paris on July 20") and synthesizes the agent's structured report.
 
 All agents share one system-prompt builder (`remy/identity/build_system_prompt`)
 = IDENTITY + RULES + MEMORY + STANDING_ORDERS + live personality dials +

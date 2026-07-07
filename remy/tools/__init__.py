@@ -9,6 +9,7 @@ agent (or which model) asked for the call.
 from remy.permissions import guarded
 from remy.tools import (
     apps,
+    browser,
     filesystem,
     input as input_tools,
     memory_tools,
@@ -24,7 +25,7 @@ from remy.tools import (
 ALL_MODULES = [
     web, system, utils,
     filesystem, shell, apps, input_tools, screen,
-    scheduler, memory_tools, personality_tools,
+    scheduler, memory_tools, personality_tools, browser,
 ]
 
 

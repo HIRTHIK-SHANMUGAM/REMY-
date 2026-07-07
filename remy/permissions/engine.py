@@ -53,6 +53,29 @@ _SAFE_SHELL_PREFIXES = (
 
 _PATH_ARG_NAMES = {"path", "file_path", "source", "destination", "directory", "cwd"}
 
+# Browser navigation patterns that always require user approval: auth pages
+# and anything financial. Matched against "host/path" (lowercased) with
+# fnmatch-style wildcards.
+BROWSER_APPROVAL_PATTERNS = [
+    "*google.com/accounts*",
+    "*accounts.google.com*",
+    "*github.com/login*",
+    "*bank*",
+    "*paypal.com*",
+]
+
+
+def url_requires_approval(url: str) -> tuple[bool, str]:
+    """True if navigating to this URL needs explicit user approval."""
+    from fnmatch import fnmatch
+    from urllib.parse import urlparse
+    parsed = urlparse(url if "://" in url else f"https://{url}")
+    target = f"{parsed.netloc}{parsed.path}".lower()
+    for pattern in BROWSER_APPROVAL_PATTERNS:
+        if fnmatch(target, pattern):
+            return True, f"URL matches auth/financial pattern `{pattern}`"
+    return False, ""
+
 
 def check_shell_command(command: str) -> tuple[str, str]:
     """
@@ -107,6 +130,12 @@ def authorize(tool_name: str, args: dict[str, Any], actor: str = "user-session")
                 f"Refused: this command {why}. This is a hard rule (RULES.md); "
                 f"it will not run even with approval.")
         if verdict == "approval":
+            tier, escalation_reason = RiskTier.REQUIRES_APPROVAL, why
+
+    # 1b. Browser navigation to auth/financial sites → approval
+    if tool_name == "navigate_to":
+        needs, why = url_requires_approval(str(args.get("url", "")))
+        if needs:
             tier, escalation_reason = RiskTier.REQUIRES_APPROVAL, why
 
     # 2. Filesystem allowlist — out-of-workspace paths escalate to approval

@@ -1,0 +1,122 @@
+name: Release
+
+# Builds native REMY desktop bundles on real Windows/macOS/Linux runners and
+# publishes them to a GitHub Release with SHA256 checksums.
+# Trigger: manually (workflow_dispatch) or by pushing a v* tag.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version tag (e.g. v1.0.0)"
+        required: true
+        default: "v1.0.0"
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  VERSION: ${{ github.event.inputs.version || github.ref_name }}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: windows
+          - os: macos-latest
+            label: macos
+          - os: ubuntu-latest
+            label: linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - name: Install Linux webview deps
+        if: matrix.label == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
+            libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Build bundles
+        working-directory: desktop/src-tauri
+        run: cargo tauri build
+
+      - name: Collect artifacts + checksums (unix)
+        if: matrix.label != 'windows'
+        shell: bash
+        run: |
+          mkdir -p dist
+          find desktop/src-tauri/target/release/bundle \
+            \( -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" \) \
+            -exec cp {} dist/ \;
+          cd dist
+          for f in *; do
+            base="remy-${VERSION}-${{ matrix.label }}-${f}"
+            mv "$f" "$base"
+          done
+          shasum -a 256 * > "SHA256SUMS-${{ matrix.label }}.txt" || \
+            sha256sum * > "SHA256SUMS-${{ matrix.label }}.txt"
+          ls -la
+
+      - name: Collect artifacts + checksums (windows)
+        if: matrix.label == 'windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Get-ChildItem -Recurse desktop/src-tauri/target/release/bundle `
+            -Include *.msi, *-setup.exe | ForEach-Object {
+              Copy-Item $_.FullName ("dist/remy-$env:VERSION-windows-" + $_.Name)
+            }
+          Set-Location dist
+          Get-ChildItem | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash $_ -Algorithm SHA256).Hash.ToLower(), $_.Name
+          } | Out-File -Encoding ascii "SHA256SUMS-windows.txt"
+          Get-ChildItem
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundles-${{ matrix.label }}
+          path: dist/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Merge checksums
+        run: |
+          cd artifacts
+          cat SHA256SUMS-*.txt > SHA256SUMS.txt
+          rm SHA256SUMS-*.txt
+          ls -la
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
+          name: "REMY ${{ env.VERSION }} - Autonomous Desktop AI Agent"
+          body_path: INSTALLATION_INSTRUCTIONS.md
+          files: artifacts/*
+          fail_on_unmatched_files: true

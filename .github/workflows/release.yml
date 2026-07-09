@@ -2,7 +2,10 @@ name: Release
 
 # Builds native REMY desktop bundles on real Windows/macOS/Linux runners and
 # publishes them to a GitHub Release with SHA256 checksums.
-# Trigger: manually (workflow_dispatch) or by pushing a v* tag.
+# Triggers: manual (workflow_dispatch), a v* tag, or a change to the
+# .release-version sentinel file (version is read from that file) — the last
+# path exists because some environments cannot push tags directly; the
+# release action creates the tag server-side instead.
 
 on:
   workflow_dispatch:
@@ -13,12 +16,11 @@ on:
         default: "v1.0.0"
   push:
     tags: ["v*"]
+    branches: ["**"]
+    paths: [".release-version"]
 
 permissions:
   contents: write
-
-env:
-  VERSION: ${{ github.event.inputs.version || github.ref_name }}
 
 jobs:
   build:
@@ -35,6 +37,18 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Resolve version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            v="${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref_type }}" == "tag" ]]; then
+            v="${{ github.ref_name }}"
+          else
+            v="$(tr -d '[:space:]' < .release-version)"
+          fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -98,6 +112,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Resolve version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            v="${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref_type }}" == "tag" ]]; then
+            v="${{ github.ref_name }}"
+          else
+            v="$(tr -d '[:space:]' < .release-version)"
+          fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
 
       - uses: actions/download-artifact@v4
         with:

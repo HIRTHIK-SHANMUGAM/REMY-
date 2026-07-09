@@ -46,7 +46,7 @@ jobs:
           elif [[ "${{ github.ref_type }}" == "tag" ]]; then
             v="${{ github.ref_name }}"
           else
-            v="$(tr -d '[:space:]' < .release-version)"
+            v="$(head -n1 .release-version | tr -d '[:space:]')"
           fi
           echo "VERSION=$v" >> "$GITHUB_ENV"
 
@@ -97,9 +97,13 @@ jobs:
               Copy-Item $_.FullName ("dist/remy-$env:VERSION-windows-" + $_.Name)
             }
           Set-Location dist
-          Get-ChildItem | ForEach-Object {
-            "{0}  {1}" -f (Get-FileHash $_ -Algorithm SHA256).Hash.ToLower(), $_.Name
-          } | Out-File -Encoding ascii "SHA256SUMS-windows.txt"
+          # snapshot the file list BEFORE opening the output file, otherwise
+          # Get-FileHash tries to hash the checksum file mid-write
+          $files = @(Get-ChildItem -File)
+          $lines = $files | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
+          }
+          $lines | Out-File -Encoding ascii "SHA256SUMS-windows.txt"
           Get-ChildItem
 
       - uses: actions/upload-artifact@v4
@@ -121,7 +125,7 @@ jobs:
           elif [[ "${{ github.ref_type }}" == "tag" ]]; then
             v="${{ github.ref_name }}"
           else
-            v="$(tr -d '[:space:]' < .release-version)"
+            v="$(head -n1 .release-version | tr -d '[:space:]')"
           fi
           echo "VERSION=$v" >> "$GITHUB_ENV"
 

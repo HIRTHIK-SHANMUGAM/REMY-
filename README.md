@@ -69,13 +69,21 @@ Everything binds to `127.0.0.1` unless you explicitly change `REMY_BIND_HOST`.
 
 ```bash
 git clone https://github.com/hirthik-shanmugam/remy-.git && cd remy-
-pip install -e ".[llm,memory,desktop]"   # add [voice] for the LiveKit pipeline
+pip install -e ".[llm,memory,desktop,browser]"   # add [voice] for the LiveKit pipeline
 cp .env.example .env                     # set ANTHROPIC_API_KEY etc.
 
-python -m remy.api        # dashboard + heartbeat + agents → http://127.0.0.1:8377
+# Build the chat UI once (React + TypeScript + Vite + Tailwind)
+cd frontend && npm ci && npm run build && cd ..
+
+python -m remy.api        # chat UI + API + heartbeat + agents → http://127.0.0.1:8377
 python server.py          # (optional) MCP server for the voice agent, :8000
 python agent_remy.py dev  # (optional) LiveKit voice agent
 ```
+
+`http://127.0.0.1:8377/` serves the **React chat UI**; the advanced HUD
+dashboard (personality dials, audit log, approvals, heartbeat) lives at
+`/hud`. During UI development, `cd frontend && npm run dev` runs Vite on
+:5173 with a proxy to the backend.
 
 Or run it as a proper desktop app (window + tray, always-on):
 see [desktop/README.md](desktop/README.md).

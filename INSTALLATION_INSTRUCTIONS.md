@@ -2,7 +2,11 @@
 
 Local-first JARVIS-style agent: persistent memory, adjustable personality,
 permission-gated desktop control, self-directed heartbeat, browser automation,
-and a HUD dashboard — running entirely on your machine.
+and a polished chat UI — running entirely on your machine.
+
+**New in v1.0.1:** a bundled React chat interface. The desktop app opens
+straight into the chat window (the advanced HUD dashboard is one click away
+under the tray's **Settings**).
 
 ## Install
 

@@ -56,6 +56,16 @@ jobs:
         with:
           workspaces: desktop/src-tauri
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build frontend (React → static assets)
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
       - name: Install Linux webview deps
         if: matrix.label == 'linux'
         run: |
@@ -68,6 +78,7 @@ jobs:
 
       - name: Build bundles
         working-directory: desktop/src-tauri
+        # beforeBuildCommand rebuilds the frontend from node_modules installed above
         run: cargo tauri build
 
       - name: Collect artifacts + checksums (unix)

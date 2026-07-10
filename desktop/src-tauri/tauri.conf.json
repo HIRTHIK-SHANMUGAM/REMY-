@@ -1,22 +1,22 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "REMY",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "identifier": "app.remy.desktop",
   "build": {
-    "frontendDist": "../ui"
+    "frontendDist": "../../frontend/dist",
+    "beforeBuildCommand": "npm --prefix ../../frontend run build"
   },
   "app": {
     "windows": [
       {
         "title": "REMY",
-        "url": "http://localhost:8377/",
-        "width": 1440,
-        "height": 900,
-        "minWidth": 900,
-        "minHeight": 600,
+        "width": 1200,
+        "height": 820,
+        "minWidth": 420,
+        "minHeight": 560,
         "resizable": true,
-        "backgroundColor": "#040a0d"
+        "backgroundColor": "#0b0f14"
       }
     ],
     "security": {

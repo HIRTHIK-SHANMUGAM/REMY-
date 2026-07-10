@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: theme("colors.surface.0");
+  color: theme("colors.ink.DEFAULT");
+  font-family: theme("fontFamily.sans");
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Thin, unobtrusive scrollbars for the message list. */
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: theme("colors.surface.3");
+  border-radius: 8px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Markdown rendering inside REMY messages. */
+.markdown > :first-child {
+  margin-top: 0;
+}
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+.markdown h1,
+.markdown h2,
+.markdown h3 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1em 0 0.5em;
+}
+.markdown h1 {
+  font-size: 1.35rem;
+}
+.markdown h2 {
+  font-size: 1.15rem;
+}
+.markdown h3 {
+  font-size: 1.02rem;
+}
+.markdown p {
+  margin: 0.5em 0;
+}
+.markdown ul,
+.markdown ol {
+  margin: 0.5em 0;
+  padding-left: 1.4em;
+}
+.markdown li {
+  margin: 0.2em 0;
+}
+.markdown a {
+  color: theme("colors.accent.DEFAULT");
+  text-decoration: underline;
+}
+.markdown code {
+  font-family: theme("fontFamily.mono");
+  font-size: 0.86em;
+  background: theme("colors.surface.0");
+  border: 1px solid theme("colors.surface.3");
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+.markdown pre {
+  background: theme("colors.surface.0");
+  border: 1px solid theme("colors.surface.3");
+  border-radius: 8px;
+  padding: 0.85em 1em;
+  overflow-x: auto;
+  margin: 0.6em 0;
+}
+.markdown pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+.markdown blockquote {
+  border-left: 3px solid theme("colors.surface.3");
+  margin: 0.6em 0;
+  padding-left: 0.9em;
+  color: theme("colors.ink.muted");
+}
+.markdown table {
+  border-collapse: collapse;
+  margin: 0.6em 0;
+  display: block;
+  overflow-x: auto;
+}
+.markdown th,
+.markdown td {
+  border: 1px solid theme("colors.surface.3");
+  padding: 0.4em 0.6em;
+  text-align: left;
+}

@@ -25,7 +25,9 @@ use tauri::{
 };
 
 const BACKEND_ADDR: &str = "127.0.0.1:8377";
-const BACKEND_WAIT: Duration = Duration::from_secs(5);
+// Wait up to 30s for the Python backend to come up before loading the UI —
+// first launch can be slow (heartbeat scheduler, tool registration, imports).
+const BACKEND_WAIT: Duration = Duration::from_secs(30);
 
 struct Backend(Mutex<Option<Child>>);
 
@@ -92,6 +94,16 @@ fn wait_for_backend() -> bool {
     false
 }
 
+fn open_url(url: &str) {
+    let _ = if cfg!(target_os = "macos") {
+        Command::new("open").arg(url).spawn()
+    } else if cfg!(target_os = "windows") {
+        Command::new("cmd").args(["/C", "start", "", url]).spawn()
+    } else {
+        Command::new("xdg-open").arg(url).spawn()
+    };
+}
+
 fn kill_backend(app: &tauri::AppHandle) {
     if let Some(mut child) = app.state::<Backend>().0.lock().unwrap().take() {
         let _ = child.kill();
@@ -106,14 +118,20 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .manage(Backend(Mutex::new(None)))
         .setup(|app| {
-            // 1. backend: spawn, then wait up to 5s for :8377
+            // 1. backend: spawn it. The window loads the BUNDLED React UI
+            //    instantly (local assets, no network) so there's never a
+            //    "can't reach this page" flash; the UI polls the backend's
+            //    /health itself and shows Connecting → Online as it comes up.
             let backend = spawn_backend();
             *app.state::<Backend>().0.lock().unwrap() = backend;
-            wait_for_backend();
-            if let Some(w) = app.get_webview_window("main") {
-                // (re)load now that the backend is up
-                let _ = w.eval("window.location.replace('http://localhost:8377/')");
-            }
+            std::thread::spawn(|| {
+                // Log readiness for diagnostics; the UI handles the UX.
+                if wait_for_backend() {
+                    app_log("backend healthy");
+                } else {
+                    app_log("WARNING: backend not healthy within 30s");
+                }
+            });
 
             // 2. tray: [Open, Settings, Quit]
             let open = MenuItem::with_id(app, "open", "Open", true, None::<&str>)?;
@@ -134,13 +152,10 @@ fn main() {
                         }
                     }
                     "settings" => {
-                        // Settings = the dashboard's personality/settings panels
-                        if let Some(w) = app.get_webview_window("main") {
-                            let _ = w.eval(
-                                "window.location.replace('http://localhost:8377/?panel=settings')");
-                            let _ = w.show();
-                            let _ = w.set_focus();
-                        }
+                        // Settings = the advanced HUD dashboard (personality
+                        // dials, audit, approvals), opened in the browser so
+                        // the app window stays on the chat UI.
+                        open_url("http://localhost:8377/hud");
                     }
                     "quit" => {
                         app_log("quit requested from tray");

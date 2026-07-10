@@ -53,7 +53,43 @@ fn app_log(message: &str) {
     }
 }
 
+fn backend_alive() -> bool {
+    BACKEND_ADDR
+        .parse()
+        .ok()
+        .and_then(|addr| {
+            TcpStream::connect_timeout(&addr, Duration::from_millis(300)).ok()
+        })
+        .is_some()
+}
+
+fn configure_child(cmd: &mut Command) {
+    // On Linux, ask the kernel to send the child SIGTERM if this process dies,
+    // so a force-kill of the app never orphans the Python backend. (Normal
+    // quit still kills it explicitly via kill_backend.)
+    #[cfg(target_os = "linux")]
+    {
+        use std::os::unix::process::CommandExt;
+        unsafe {
+            cmd.pre_exec(|| {
+                libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGTERM);
+                Ok(())
+            });
+        }
+    }
+    let _ = cmd; // no-op on other platforms
+}
+
 fn spawn_backend() -> Option<Child> {
+    // Reuse an already-running backend (e.g. one the user started manually, or
+    // an orphan from a previous hard-kill) instead of spawning a duplicate
+    // that would fail to bind port 8377. We return None so we don't later kill
+    // a backend this instance didn't start.
+    if backend_alive() {
+        app_log("existing backend detected on :8377 — reusing it");
+        return None;
+    }
+
     // Prefer an explicit interpreter (packaged installs set REMY_PYTHON);
     // fall back to whatever python3/python is on PATH for dev runs.
     let candidates = [
@@ -62,11 +98,10 @@ fn spawn_backend() -> Option<Child> {
         "python".into(),
     ];
     for python in candidates.iter().filter(|c| !c.is_empty()) {
-        match Command::new(python)
-            .args(["-m", "remy.api"])
-            .current_dir(repo_root())
-            .spawn()
-        {
+        let mut cmd = Command::new(python);
+        cmd.args(["-m", "remy.api"]).current_dir(repo_root());
+        configure_child(&mut cmd);
+        match cmd.spawn() {
             Ok(child) => {
                 app_log(&format!("backend spawned via {python} (pid {})", child.id()));
                 return Some(child);

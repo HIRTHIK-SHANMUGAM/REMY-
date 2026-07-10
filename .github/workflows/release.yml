@@ -1,0 +1,152 @@
+name: Release
+
+# Builds native REMY desktop bundles on real Windows/macOS/Linux runners and
+# publishes them to a GitHub Release with SHA256 checksums.
+# Triggers: manual (workflow_dispatch), a v* tag, or a change to the
+# .release-version sentinel file (version is read from that file) — the last
+# path exists because some environments cannot push tags directly; the
+# release action creates the tag server-side instead.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version tag (e.g. v1.0.0)"
+        required: true
+        default: "v1.0.0"
+  push:
+    tags: ["v*"]
+    branches: ["**"]
+    paths: [".release-version"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: windows
+          - os: macos-latest
+            label: macos
+          - os: ubuntu-latest
+            label: linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            v="${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref_type }}" == "tag" ]]; then
+            v="${{ github.ref_name }}"
+          else
+            v="$(head -n1 .release-version | tr -d '[:space:]')"
+          fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - name: Install Linux webview deps
+        if: matrix.label == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
+            libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Build bundles
+        working-directory: desktop/src-tauri
+        run: cargo tauri build
+
+      - name: Collect artifacts + checksums (unix)
+        if: matrix.label != 'windows'
+        shell: bash
+        run: |
+          mkdir -p dist
+          find desktop/src-tauri/target/release/bundle \
+            \( -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" \) \
+            -exec cp {} dist/ \;
+          cd dist
+          for f in *; do
+            base="remy-${VERSION}-${{ matrix.label }}-${f}"
+            mv "$f" "$base"
+          done
+          shasum -a 256 * > "SHA256SUMS-${{ matrix.label }}.txt" || \
+            sha256sum * > "SHA256SUMS-${{ matrix.label }}.txt"
+          ls -la
+
+      - name: Collect artifacts + checksums (windows)
+        if: matrix.label == 'windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Get-ChildItem -Recurse desktop/src-tauri/target/release/bundle `
+            -Include *.msi, *-setup.exe | ForEach-Object {
+              Copy-Item $_.FullName ("dist/remy-$env:VERSION-windows-" + $_.Name)
+            }
+          Set-Location dist
+          # snapshot the file list BEFORE opening the output file, otherwise
+          # Get-FileHash tries to hash the checksum file mid-write
+          $files = @(Get-ChildItem -File)
+          $lines = $files | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
+          }
+          $lines | Out-File -Encoding ascii "SHA256SUMS-windows.txt"
+          Get-ChildItem
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundles-${{ matrix.label }}
+          path: dist/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            v="${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref_type }}" == "tag" ]]; then
+            v="${{ github.ref_name }}"
+          else
+            v="$(head -n1 .release-version | tr -d '[:space:]')"
+          fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Merge checksums
+        run: |
+          cd artifacts
+          cat SHA256SUMS-*.txt > SHA256SUMS.txt
+          rm SHA256SUMS-*.txt
+          ls -la
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
+          name: "REMY ${{ env.VERSION }} - Autonomous Desktop AI Agent"
+          body_path: INSTALLATION_INSTRUCTIONS.md
+          files: artifacts/*
+          fail_on_unmatched_files: true

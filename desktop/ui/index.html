@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMY</title>
+<style>
+  :root{
+    --bg:#040a0d; --panel:#071318cc; --line:#0e2b33; --cyan:#2fd8e8;
+    --cyan-dim:#1a8fa0; --text:#bfe9ef; --muted:#5f8a93; --warn:#e8b02f;
+    --danger:#e85a4f; --ok:#3ee89c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    font-size:13px; min-height:100vh; overflow-x:hidden;
+    background-image:
+      radial-gradient(ellipse at 50% 40%, #0a2a3355 0%, transparent 60%),
+      repeating-linear-gradient(0deg, transparent 0 2px, #0a1a2005 2px 4px);
+  }
+  header{
+    display:flex; align-items:center; gap:14px;
+    padding:10px 18px; border-bottom:1px solid var(--line);
+    letter-spacing:3px; text-transform:uppercase;
+  }
+  header .logo{font-size:22px; font-weight:700; color:var(--cyan);
+    text-shadow:0 0 12px var(--cyan);}
+  header .sub{color:var(--muted); font-size:11px; letter-spacing:2px;}
+  header .right{margin-left:auto; display:flex; gap:16px; font-size:11px;}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;
+    background:var(--ok); box-shadow:0 0 6px var(--ok); margin-right:5px;}
+  main{
+    display:grid; gap:12px; padding:12px 18px 24px;
+    grid-template-columns: 300px 1fr 320px;
+  }
+  @media (max-width:1000px){ main{grid-template-columns:1fr} }
+  .col{display:flex; flex-direction:column; gap:12px; min-width:0;}
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:0; overflow:hidden;
+    box-shadow:0 0 18px #06222a55, inset 0 0 30px #04141a66;
+  }
+  .panel h2{
+    font-size:11px; letter-spacing:2.5px; text-transform:uppercase;
+    color:var(--cyan); padding:8px 12px; border-bottom:1px solid var(--line);
+    background:linear-gradient(90deg,#0a2a3344,transparent);
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .panel .body{padding:10px 12px; overflow:auto;}
+  /* core */
+  .core{display:flex; flex-direction:column; align-items:center; padding:14px 0 4px;}
+  .ring{position:relative; width:150px; height:150px;}
+  .ring div{position:absolute; inset:0; border-radius:50%; border:2px solid transparent;}
+  .ring .r1{border-top-color:var(--cyan); border-right-color:var(--cyan);
+    animation:spin 4s linear infinite; box-shadow:0 0 20px #2fd8e855;}
+  .ring .r2{inset:12px; border-bottom-color:var(--cyan-dim); border-left-color:var(--cyan-dim);
+    animation:spin 7s linear infinite reverse;}
+  .ring .r3{inset:26px; border-top-color:#2fd8e877; animation:spin 10s linear infinite;}
+  .ring .label{position:absolute; inset:0; display:flex; align-items:center;
+    justify-content:center; font-size:24px; letter-spacing:6px; font-weight:700;
+    color:var(--cyan); text-shadow:0 0 16px var(--cyan); border:none;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* chat */
+  #chatlog{height:340px; overflow-y:auto; display:flex; flex-direction:column;
+    gap:8px; padding:10px 12px;}
+  .msg{max-width:85%; padding:7px 11px; border-radius:6px; line-height:1.45;
+    white-space:pre-wrap; word-break:break-word;}
+  .msg.user{align-self:flex-end; background:#0d3341; border:1px solid #14495c;}
+  .msg.remy{align-self:flex-start; background:#07242b; border:1px solid var(--line);
+    color:#d3f4f9;}
+  .msg.sys{align-self:center; color:var(--muted); font-size:11px; background:none;}
+  .chatbar{display:flex; gap:8px; padding:10px 12px; border-top:1px solid var(--line);}
+  input[type=text]{
+    flex:1; background:#04161c; color:var(--text); border:1px solid var(--line);
+    border-radius:4px; padding:9px 12px; font-size:13px; outline:none;
+  }
+  input[type=text]:focus{border-color:var(--cyan-dim); box-shadow:0 0 8px #2fd8e833;}
+  button{
+    background:#0a2f3a; color:var(--cyan); border:1px solid var(--cyan-dim);
+    border-radius:4px; padding:8px 14px; cursor:pointer; font-size:12px;
+    letter-spacing:1px; text-transform:uppercase;
+  }
+  button:hover{background:#0e4150; box-shadow:0 0 10px #2fd8e844;}
+  button.small{padding:3px 9px; font-size:10px;}
+  button.danger{color:var(--danger); border-color:#7a2f28;}
+  button.ok{color:var(--ok); border-color:#1d6b4a;}
+  /* sliders */
+  .trait{margin-bottom:10px;}
+  .trait .row{display:flex; justify-content:space-between; font-size:11px;
+    color:var(--muted); margin-bottom:3px;}
+  .trait .row b{color:var(--text); font-weight:600;}
+  .trait .pct{color:var(--cyan); font-variant-numeric:tabular-nums;}
+  input[type=range]{width:100%; accent-color:var(--cyan); height:4px;
+    background:var(--line); cursor:pointer;}
+  /* meters */
+  .meter{margin-bottom:9px;}
+  .meter .row{display:flex; justify-content:space-between; font-size:11px;
+    color:var(--muted); margin-bottom:3px;}
+  .bar{height:6px; background:#06232b; border:1px solid var(--line);
+    border-radius:3px; overflow:hidden;}
+  .bar i{display:block; height:100%; background:linear-gradient(90deg,var(--cyan-dim),var(--cyan));
+    box-shadow:0 0 8px var(--cyan); transition:width .6s;}
+  /* lists */
+  .item{border:1px solid var(--line); border-radius:4px; padding:7px 9px;
+    margin-bottom:7px; background:#04161c;}
+  .item .t{color:#d3f4f9; margin-bottom:2px;}
+  .item .m{color:var(--muted); font-size:11px;}
+  .item .actions{margin-top:6px; display:flex; gap:6px;}
+  .log{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:10.5px;
+    line-height:1.55; color:#8fc9d2; max-height:220px; overflow-y:auto;}
+  .log .warnl{color:var(--warn)} .log .badl{color:var(--danger)}
+  .empty{color:var(--muted); font-style:italic; padding:4px 0;}
+  .agents{display:grid; gap:6px;}
+  .agent{display:flex; align-items:center; gap:8px; border:1px solid var(--line);
+    border-radius:4px; padding:6px 9px; background:#04161c;}
+  .agent .name{letter-spacing:1px;}
+  .agent .role{margin-left:auto; color:var(--muted); font-size:10px;}
+  .tabs{display:flex; gap:2px;}
+  .badge{background:#0a2f3a; border:1px solid var(--cyan-dim); color:var(--cyan);
+    border-radius:9px; font-size:10px; padding:1px 8px;}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">REMY</span>
+  <span class="sub">Autonomous Desktop Agent</span>
+  <div class="right">
+    <span><span class="dot"></span>SYSTEM <span id="hd-status">ONLINE</span></span>
+    <span>SECURITY: <span style="color:var(--ok)">PERMISSION LAYER ACTIVE</span></span>
+    <span id="hd-heartbeat" style="color:var(--muted)">HEARTBEAT —</span>
+  </div>
+</header>
+
+<main>
+  <!-- LEFT -->
+  <div class="col">
+    <div class="panel">
+      <h2>System Diagnostics</h2>
+      <div class="body" id="diag"></div>
+    </div>
+    <div class="panel">
+      <h2>Autonomous Agents</h2>
+      <div class="body agents">
+        <div class="agent"><span class="dot"></span><span class="name">ORCHESTRATOR</span><span class="role">reasoning · fable</span></div>
+        <div class="agent"><span class="dot"></span><span class="name">EXECUTOR</span><span class="role">actions</span></div>
+        <div class="agent"><span class="dot"></span><span class="name">WATCHER</span><span class="role">heartbeat</span></div>
+        <div class="agent"><span class="dot"></span><span class="name">REVIEWER</span><span class="role">safety</span></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Personality Settings <span class="badge" id="pers-saved" style="display:none">saved</span></h2>
+      <div class="body" id="personality"></div>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="col">
+    <div class="panel">
+      <div class="core">
+        <div class="ring"><div class="r1"></div><div class="r2"></div><div class="r3"></div><div class="label">REMY</div></div>
+      </div>
+      <div id="chatlog"><div class="msg sys">REMY online. Say something.</div></div>
+      <div class="chatbar">
+        <input id="chat-in" type="text" placeholder="Talk to REMY…" autocomplete="off">
+        <button id="chat-send">Send</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Live Logs <span class="badge" id="log-count"></span></h2>
+      <div class="body log" id="auditlog"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="col">
+    <div class="panel">
+      <h2>Pending Approvals <span class="badge" id="appr-count">0</span></h2>
+      <div class="body" id="approvals"></div>
+    </div>
+    <div class="panel">
+      <h2>Active Tasks
+        <span class="tabs"><button class="small" id="task-add">+ task</button></span>
+      </h2>
+      <div class="body" id="tasks"></div>
+    </div>
+    <div class="panel">
+      <h2>Heartbeat
+        <span class="tabs"><button class="small" id="hb-run">run now</button></span>
+      </h2>
+      <div class="body" id="heartbeat"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g,
+  c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+async function api(path, opts){
+  const r = await fetch(path, opts ? {headers:{"Content-Type":"application/json"}, ...opts} : undefined);
+  return r.json();
+}
+
+/* ── chat ── */
+function addMsg(cls, text){
+  const div = document.createElement("div");
+  div.className = "msg " + cls;
+  div.textContent = text;
+  $("chatlog").appendChild(div);
+  $("chatlog").scrollTop = $("chatlog").scrollHeight;
+}
+async function sendChat(){
+  const text = $("chat-in").value.trim();
+  if(!text) return;
+  $("chat-in").value = "";
+  addMsg("user", text);
+  addMsg("sys", "…thinking");
+  try{
+    const res = await api("/api/chat", {method:"POST", body:JSON.stringify({message:text})});
+    $("chatlog").lastChild.remove();
+    addMsg("remy", res.reply);
+  }catch(e){
+    $("chatlog").lastChild.remove();
+    addMsg("sys", "connection error: " + e);
+  }
+  refresh();
+}
+$("chat-send").onclick = sendChat;
+$("chat-in").addEventListener("keydown", e => { if(e.key === "Enter") sendChat(); });
+
+/* ── personality sliders ── */
+let traitsBuilt = false, saveTimer = null;
+function buildPersonality(state){
+  const box = $("personality");
+  if(!traitsBuilt){
+    box.innerHTML = "";
+    for(const t of state.traits){
+      const val = state.personality[t.key] ?? 50;
+      const div = document.createElement("div");
+      div.className = "trait";
+      div.innerHTML = `
+        <div class="row"><b>${esc(t.label)}</b><span class="pct" id="pct-${t.key}">${val}%</span></div>
+        <input type="range" min="0" max="100" value="${val}" data-key="${t.key}">`;
+      box.appendChild(div);
+    }
+    box.querySelectorAll("input[type=range]").forEach(sl => {
+      sl.addEventListener("input", () => {
+        $("pct-" + sl.dataset.key).textContent = sl.value + "%";
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(savePersonality, 500);
+      });
+    });
+    traitsBuilt = true;
+  }
+}
+async function savePersonality(){
+  const values = {};
+  document.querySelectorAll("#personality input[type=range]")
+    .forEach(sl => values[sl.dataset.key] = parseInt(sl.value));
+  await api("/api/personality", {method:"POST", body:JSON.stringify({values})});
+  const b = $("pers-saved");
+  b.style.display = "inline-block";
+  setTimeout(() => b.style.display = "none", 1500);
+}
+
+/* ── state rendering ── */
+function meter(label, pct){
+  const p = pct == null ? 0 : Math.round(pct);
+  return `<div class="meter"><div class="row"><span>${label}</span><span>${pct == null ? "n/a" : p + "%"}</span></div>
+    <div class="bar"><i style="width:${p}%"></i></div></div>`;
+}
+function render(state){
+  const h = state.health || {};
+  $("diag").innerHTML =
+    meter("CPU", h.cpu_percent) +
+    meter("MEMORY", h.memory_percent) +
+    meter("DISK USED", h.disk_free_percent == null ? null : 100 - h.disk_free_percent) +
+    `<div class="m" style="color:var(--muted);font-size:11px">disk free: ${h.disk_free_percent ?? "?"}%</div>`;
+
+  buildPersonality(state);
+
+  const appr = state.pending_approvals || [];
+  $("appr-count").textContent = appr.length;
+  $("approvals").innerHTML = appr.length ? "" : '<div class="empty">Nothing awaiting approval.</div>';
+  for(const a of appr){
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `<div class="t">${esc(a.tool)}</div>
+      <div class="m">${esc(a.reason)}</div>
+      <div class="m">${esc(JSON.stringify(a.args))}</div>
+      <div class="actions">
+        <button class="small ok">Approve</button>
+        <button class="small danger">Deny</button>
+      </div>`;
+    const [ap, dn] = div.querySelectorAll("button");
+    ap.onclick = async () => { await api("/api/approvals/" + a.id, {method:"POST", body:JSON.stringify({approve:true})}); refresh(); };
+    dn.onclick = async () => { await api("/api/approvals/" + a.id, {method:"POST", body:JSON.stringify({approve:false})}); refresh(); };
+    $("approvals").appendChild(div);
+  }
+
+  const tks = state.tasks || [];
+  $("tasks").innerHTML = tks.length ? "" : '<div class="empty">No scheduled tasks.</div>';
+  for(const t of tks){
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `<div class="t">${esc(t.description)}</div>
+      <div class="m">${t.due_at ? "due " + esc(t.due_at) : "asap"}${t.recur_minutes ? " · every " + t.recur_minutes + "m" : ""}</div>
+      <div class="actions"><button class="small danger">Cancel</button></div>`;
+    div.querySelector("button").onclick = async () => {
+      await fetch("/api/tasks/" + t.id, {method:"DELETE"}); refresh();
+    };
+    $("tasks").appendChild(div);
+  }
+
+  const hb = state.heartbeat || {};
+  $("hd-heartbeat").textContent = "HEARTBEAT " + (hb.ts ? new Date(hb.ts).toLocaleTimeString() : "—");
+  $("heartbeat").innerHTML =
+    `<div class="m" style="margin-bottom:6px">every ${state.heartbeat_minutes} min · last: ${hb.ts ? new Date(hb.ts).toLocaleString() : "never"}</div>
+     <div class="t">${esc(hb.assessment || "")}</div>
+     <div class="m">${esc((hb.results || []).join(" · "))}</div>
+     <div class="m" style="color:var(--muted)">decided by: ${esc(hb.decided_by || "—")}</div>`;
+
+  const logs = state.audit || [];
+  $("log-count").textContent = logs.length;
+  $("auditlog").innerHTML = logs.map(e => {
+    const cls = e.decision === "blocked" || e.decision === "denied" ? "badl"
+              : e.decision === "approval-requested" ? "warnl" : "";
+    const ts = (e.ts || "").slice(11, 19);
+    return `<div class="${cls}">[${ts}] ${esc(e.actor)} · ${esc(e.tool)} · ${esc(e.decision)}${e.outcome ? " · " + esc(String(e.outcome).slice(0, 80)) : ""}</div>`;
+  }).join("");
+}
+
+async function refresh(){
+  try{
+    const state = await api("/api/state");
+    $("hd-status").textContent = "ONLINE";
+    render(state);
+  }catch(e){
+    $("hd-status").textContent = "OFFLINE";
+  }
+}
+
+$("hb-run").onclick = async () => { await api("/api/heartbeat/run", {method:"POST", body:"{}"}); refresh(); };
+$("task-add").onclick = async () => {
+  const d = prompt("Task description:");
+  if(!d) return;
+  await api("/api/tasks", {method:"POST", body:JSON.stringify({description:d})});
+  refresh();
+};
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>

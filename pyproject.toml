@@ -1,0 +1,61 @@
+[project]
+name = "remy"
+version = "0.1.0"
+description = "REMY — a local-first, autonomous, cross-platform desktop AI agent"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp",
+    "httpx",
+    "python-dotenv",
+    "fastapi",
+    "uvicorn",
+    "apscheduler>=3.10",
+    "psutil",
+]
+
+[project.optional-dependencies]
+# Voice pipeline (LiveKit) — optional, REMY works text-only without it
+voice = [
+    "livekit-agents[deepgram,groq,openai,sarvam,silero]>=1.5.1",
+    "livekit-plugins-google>=1.5.1",
+]
+# Claude as the reasoning engine for the orchestrator/watcher/reviewer agents
+llm = [
+    "anthropic>=0.40",
+]
+# Semantic long-term memory
+memory = [
+    "chromadb>=0.5",
+]
+# Browser automation (run `playwright install chromium` after installing)
+browser = [
+    "playwright>=1.45",
+]
+# Desktop control extras (screen capture, OCR, input automation)
+desktop = [
+    "pyautogui",
+    "mss",
+    "pillow",
+    "pytesseract",
+]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+]
+
+[project.scripts]
+remy = "server:main"
+remy-voice = "agent_remy:dev"
+remy-app = "remy.api:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["remy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

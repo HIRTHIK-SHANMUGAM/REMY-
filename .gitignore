@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Env / secrets
+.env
+
+# REMY runtime state (audit logs, memory DB, approvals, tasks)
+remy_data/
+
+# Tauri / Node
+desktop/src-tauri/target/
+node_modules/
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tauri generated schemas
+desktop/src-tauri/gen/schemas/

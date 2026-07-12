@@ -4,8 +4,7 @@
   "version": "1.0.1",
   "identifier": "app.remy.desktop",
   "build": {
-    "frontendDist": "../../frontend/dist",
-    "beforeBuildCommand": "npm --prefix ../../frontend run build"
+    "frontendDist": "../../frontend/dist"
   },
   "app": {
     "windows": [

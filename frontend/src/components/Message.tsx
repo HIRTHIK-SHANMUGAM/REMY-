@@ -46,7 +46,7 @@ function MessageBase({
   message: ChatMessage;
   grouped?: boolean;
 }) {
-  const { role, content, ts } = message;
+  const { role, content, ts, streaming } = message;
 
   if (role === "system") {
     return (
@@ -96,14 +96,22 @@ function MessageBase({
               <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
                 {content}
               </ReactMarkdown>
+              {streaming && (
+                <span
+                  aria-hidden
+                  className="ml-0.5 inline-block h-[1.05em] w-[3px] translate-y-[3px] animate-pulse rounded-sm bg-accent align-middle"
+                />
+              )}
             </div>
           )}
         </div>
 
-        {/* Hover-reveal action row: timestamp + copy the whole message. */}
+        {/* Hover-reveal action row: timestamp + copy the whole message.
+            Hidden while the message is still streaming. */}
         <div
           className={[
-            "mt-1 flex items-center gap-1 px-1 opacity-0 transition-opacity group-hover/msg:opacity-100",
+            "mt-1 flex items-center gap-1 px-1 opacity-0 transition-opacity",
+            streaming ? "" : "group-hover/msg:opacity-100",
             isUser ? "flex-row-reverse" : "flex-row",
           ].join(" ")}
         >

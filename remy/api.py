@@ -10,13 +10,14 @@ FastAPI app bound to localhost (config.BIND_HOST) serving:
 Run: python -m remy.api   (the Tauri shell launches this automatically)
 """
 
+import json
 import logging
 from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -62,11 +63,37 @@ class ChatMessage(BaseModel):
     message: str
 
 
+def _sse(event: dict) -> str:
+    return f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+
 @app.post("/api/chat")
 def chat(body: ChatMessage):
+    """
+    Stream REMY's reply as Server-Sent Events. Emits:
+      {"type":"token","text": "..."}  per chunk as it's produced
+      {"type":"done"}                 when the reply is complete
+      {"type":"error","message": ...} if generation fails mid-stream
+    """
     from remy.agents import orchestrator
-    reply = orchestrator.handle_message(body.message)
-    return {"reply": reply}
+
+    def gen():
+        try:
+            for token in orchestrator.stream_message(body.message):
+                yield _sse({"type": "token", "text": token})
+            yield _sse({"type": "done"})
+        except Exception as exc:  # never leak a stack trace to the UI
+            yield _sse({"type": "error", "message": str(exc)})
+
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # disable proxy buffering if present
+        },
+    )
 
 
 @app.post("/api/chat/reset")

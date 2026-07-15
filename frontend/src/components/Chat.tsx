@@ -1,5 +1,6 @@
-import { RotateCcw } from "lucide-react";
+import { Moon, RotateCcw, Sun } from "lucide-react";
 import { useRemy, type Backend } from "../hooks/useRemy";
+import { useTheme } from "../hooks/useTheme";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
 import { Welcome } from "./Welcome";
@@ -21,8 +22,11 @@ function StatusDot({ backend }: { backend: Backend }) {
 
 export function Chat() {
   const { messages, sendMessage, resetChat, isLoading, backend } = useRemy();
+  const { theme, toggle } = useTheme();
 
   const isEmpty = messages.length === 0 && !isLoading;
+  const iconBtn =
+    "flex h-8 w-8 items-center justify-center rounded-lg border border-surface-3 text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink";
 
   return (
     <div className="flex h-full flex-col bg-surface-0">
@@ -37,13 +41,21 @@ export function Chat() {
               <p className="text-[11px] text-ink-faint">Autonomous Desktop Agent</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <StatusDot backend={backend} />
+            <button
+              onClick={toggle}
+              aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+              title={theme === "dark" ? "Light theme" : "Dark theme"}
+              className={iconBtn}
+            >
+              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
             <button
               onClick={resetChat}
               aria-label="New conversation"
               title="New conversation"
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-surface-3 text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
+              className={iconBtn}
             >
               <RotateCcw size={15} />
             </button>

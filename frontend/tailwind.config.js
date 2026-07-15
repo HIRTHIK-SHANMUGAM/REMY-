@@ -5,24 +5,25 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Mobbin-inspired: clean neutrals + one confident accent.
+        // Tokens resolve to CSS vars (see globals.css) so they switch with the
+        // light/dark theme; the RGB-channel form keeps opacity modifiers (/15).
         accent: {
-          DEFAULT: "#3b82f6",
-          hover: "#2563eb",
-          from: "#4f8cf7", // gradient start (bubbles, logo)
-          to: "#2f6bd8", // gradient end
-          soft: "#1e3a8a",
+          DEFAULT: "rgb(var(--accent) / <alpha-value>)",
+          hover: "rgb(var(--accent-hover) / <alpha-value>)",
+          from: "rgb(var(--accent-from) / <alpha-value>)",
+          to: "rgb(var(--accent-to) / <alpha-value>)",
+          soft: "rgb(var(--accent-soft) / <alpha-value>)",
         },
         surface: {
-          0: "#0a0e13", // app background (slightly deeper)
-          1: "#111823", // panels / REMY bubbles
-          2: "#19212d", // raised / input
-          3: "#263140", // borders / hover
+          0: "rgb(var(--surface-0) / <alpha-value>)",
+          1: "rgb(var(--surface-1) / <alpha-value>)",
+          2: "rgb(var(--surface-2) / <alpha-value>)",
+          3: "rgb(var(--surface-3) / <alpha-value>)",
         },
         ink: {
-          DEFAULT: "#e8eef4",
-          muted: "#95a3b1", // brighter for AA contrast
-          faint: "#6b7a89", // brighter than before (was #5b6875)
+          DEFAULT: "rgb(var(--ink) / <alpha-value>)",
+          muted: "rgb(var(--ink-muted) / <alpha-value>)",
+          faint: "rgb(var(--ink-faint) / <alpha-value>)",
         },
       },
       boxShadow: {

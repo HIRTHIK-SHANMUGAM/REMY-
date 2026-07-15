@@ -6,8 +6,11 @@ interface Props {
   disabled: boolean;
 }
 
+const LONG_INPUT = 300; // show a character counter past this length
+
 export function MessageInput({ onSend, disabled }: Props) {
   const [value, setValue] = useState("");
+  const [focused, setFocused] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   const grow = (el: HTMLTextAreaElement) => {
@@ -24,17 +27,25 @@ export function MessageInput({ onSend, disabled }: Props) {
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Enter sends; Shift+Enter inserts a newline.
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       submit();
     }
   };
 
+  const canSend = !disabled && value.trim().length > 0;
+
   return (
     <div className="border-t border-surface-3 bg-surface-0/80 px-4 py-3 backdrop-blur">
       <div className="mx-auto flex w-full max-w-3xl items-end gap-2">
-        <div className="flex flex-1 items-end rounded-2xl border border-surface-3 bg-surface-2 focus-within:border-accent">
+        <div
+          className={[
+            "flex flex-1 items-end rounded-2xl border bg-surface-2 transition-shadow",
+            focused
+              ? "border-accent ring-2 ring-accent/25"
+              : "border-surface-3",
+          ].join(" ")}
+        >
           <textarea
             ref={taRef}
             rows={1}
@@ -44,6 +55,8 @@ export function MessageInput({ onSend, disabled }: Props) {
               grow(e.target);
             }}
             onKeyDown={onKeyDown}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
             placeholder="Message REMY…"
             aria-label="Message REMY"
             className="max-h-40 flex-1 resize-none bg-transparent px-4 py-3 text-[14.5px] text-ink outline-none placeholder:text-ink-faint"
@@ -51,9 +64,9 @@ export function MessageInput({ onSend, disabled }: Props) {
         </div>
         <button
           onClick={submit}
-          disabled={disabled || !value.trim()}
+          disabled={!canSend}
           aria-label="Send message"
-          className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-accent text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-gradient-to-br from-accent-from to-accent-to text-white shadow-accent-glow transition-all hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
         >
           {disabled ? (
             <Loader2 size={18} className="animate-spin" />
@@ -62,9 +75,18 @@ export function MessageInput({ onSend, disabled }: Props) {
           )}
         </button>
       </div>
-      <p className="mx-auto mt-1.5 w-full max-w-3xl px-1 text-[11px] text-ink-faint">
-        Enter to send · Shift+Enter for a new line
-      </p>
+
+      {/* Meta row: hint only while focused; char counter for long messages. */}
+      <div className="mx-auto mt-1.5 flex h-4 w-full max-w-3xl items-center justify-between px-1 text-[11px] text-ink-faint">
+        <span
+          className={`transition-opacity ${focused ? "opacity-100" : "opacity-0"}`}
+        >
+          Enter to send · Shift+Enter for a new line
+        </span>
+        {value.length > LONG_INPUT && (
+          <span className="tabular-nums">{value.length} chars</span>
+        )}
+      </div>
     </div>
   );
 }

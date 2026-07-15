@@ -56,6 +56,16 @@ jobs:
         with:
           workspaces: desktop/src-tauri
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build frontend (React → static assets)
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
       - name: Install Linux webview deps
         if: matrix.label == 'linux'
         run: |
@@ -68,6 +78,7 @@ jobs:
 
       - name: Build bundles
         working-directory: desktop/src-tauri
+        # beforeBuildCommand rebuilds the frontend from node_modules installed above
         run: cargo tauri build
 
       - name: Collect artifacts + checksums (unix)
@@ -147,6 +158,6 @@ jobs:
           tag_name: ${{ env.VERSION }}
           target_commitish: ${{ github.sha }}
           name: "REMY ${{ env.VERSION }} - Autonomous Desktop AI Agent"
-          body_path: INSTALLATION_INSTRUCTIONS.md
+          body_path: RELEASE_NOTES.md
           files: artifacts/*
           fail_on_unmatched_files: true

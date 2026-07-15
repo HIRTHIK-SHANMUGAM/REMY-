@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Theme tokens (RGB channels so Tailwind opacity modifiers work) ──
+   :root is light; .dark overrides. The token names match tailwind.config.js
+   colors, so every bg-surface-1 / text-ink-muted / border-surface-3 utility
+   switches theme automatically. */
+:root {
+  color-scheme: light;
+  --surface-0: 255 255 255;
+  --surface-1: 246 248 250;
+  --surface-2: 238 241 244;
+  --surface-3: 222 227 233;
+  --ink: 15 23 32;
+  --ink-muted: 85 96 108;
+  --ink-faint: 138 149 161;
+  --accent: 37 99 235;
+  --accent-hover: 29 78 216;
+  --accent-from: 59 130 246;
+  --accent-to: 37 99 235;
+  --accent-soft: 219 234 254;
+}
+
+.dark {
+  color-scheme: dark;
+  --surface-0: 10 14 19;
+  --surface-1: 17 24 35;
+  --surface-2: 25 33 45;
+  --surface-3: 38 49 64;
+  --ink: 232 238 244;
+  --ink-muted: 149 163 177;
+  --ink-faint: 107 122 137;
+  --accent: 59 130 246;
+  --accent-hover: 37 99 235;
+  --accent-from: 79 140 247;
+  --accent-to: 47 107 216;
+  --accent-soft: 30 58 138;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: rgb(var(--surface-0));
+  color: rgb(var(--ink));
+  font-family: theme("fontFamily.sans");
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Thin, unobtrusive scrollbars for the message list. */
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: rgb(var(--surface-3));
+  border-radius: 8px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Markdown rendering inside REMY messages. */
+.markdown > :first-child {
+  margin-top: 0;
+}
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+.markdown h1,
+.markdown h2,
+.markdown h3 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1em 0 0.5em;
+}
+.markdown h1 {
+  font-size: 1.35rem;
+}
+.markdown h2 {
+  font-size: 1.15rem;
+}
+.markdown h3 {
+  font-size: 1.02rem;
+}
+.markdown p {
+  margin: 0.5em 0;
+}
+.markdown ul,
+.markdown ol {
+  margin: 0.5em 0;
+  padding-left: 1.4em;
+}
+.markdown li {
+  margin: 0.2em 0;
+}
+.markdown a {
+  color: rgb(var(--accent));
+  text-decoration: underline;
+}
+.markdown code {
+  font-family: theme("fontFamily.mono");
+  font-size: 0.86em;
+  background: rgb(var(--surface-2));
+  border: 1px solid rgb(var(--surface-3));
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+.markdown pre {
+  margin: 0.6em 0;
+}
+.markdown pre code {
+  display: block;
+  background: rgb(var(--surface-2));
+  border: 1px solid rgb(var(--surface-3));
+  border-radius: 8px;
+  padding: 0.85em 1em;
+  overflow-x: auto;
+}
+.markdown blockquote {
+  border-left: 3px solid rgb(var(--surface-3));
+  margin: 0.6em 0;
+  padding-left: 0.9em;
+  color: rgb(var(--ink-muted));
+}
+.markdown table {
+  border-collapse: collapse;
+  margin: 0.6em 0;
+  display: block;
+  overflow-x: auto;
+}
+.markdown th,
+.markdown td {
+  border: 1px solid rgb(var(--surface-3));
+  padding: 0.4em 0.6em;
+  text-align: left;
+}

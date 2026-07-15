@@ -15,6 +15,7 @@ from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -27,9 +28,22 @@ from remy.tools.system import get_health_snapshot
 
 logging.basicConfig(level=logging.INFO)
 
+# Rich HUD dashboard (legacy/advanced view) served at /hud.
 UI_DIR = PROJECT_ROOT / "desktop" / "ui"
+# Compiled React chat UI (frontend/dist) served at / — the primary interface.
+FRONTEND_DIR = PROJECT_ROOT / "frontend" / "dist"
 
 app = FastAPI(title="REMY", docs_url=None, redoc_url=None)
+
+# The desktop app loads the bundled UI from the tauri:// custom protocol and
+# calls this API cross-origin on localhost. Allow the local desktop origins;
+# browser access is same-origin and unaffected. Still localhost-bound overall.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"^(tauri://localhost|http://(localhost|127\.0\.0\.1)(:\d+)?|https://tauri\.localhost)$",
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.on_event("startup")
@@ -148,16 +162,38 @@ def run_heartbeat_now():
 
 # ── UI ───────────────────────────────────────────────────────────────
 
-@app.get("/")
-def index():
+@app.get("/health")
+def health():
+    """Liveness probe used by the desktop shell and the UI's keep-alive."""
+    return {"status": "ok", "name": config.SERVER_NAME}
+
+
+@app.get("/hud")
+def hud():
+    """The advanced HUD dashboard (personality dials, audit, approvals…)."""
     index_file = UI_DIR / "index.html"
     if index_file.exists():
         return FileResponse(index_file)
-    return JSONResponse({"remy": "online", "ui": "not built"})
+    return JSONResponse({"remy": "online", "hud": "not built"})
 
 
-if (UI_DIR / "index.html").exists() or UI_DIR.exists():
+if UI_DIR.exists():
     app.mount("/ui", StaticFiles(directory=str(UI_DIR)), name="ui")
+
+# Serve the compiled React chat UI at the root. Mounted LAST so all explicit
+# API routes above take precedence; html=True makes it a SPA fallback. If the
+# frontend hasn't been built, fall back to a clear JSON status at /.
+if (FRONTEND_DIR / "index.html").exists():
+    app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True),
+              name="frontend")
+else:
+    @app.get("/")
+    def _no_frontend():
+        return JSONResponse({
+            "remy": "online",
+            "ui": "frontend not built — run: cd frontend && npm run build",
+            "hud": "/hud",
+        })
 
 
 def main():

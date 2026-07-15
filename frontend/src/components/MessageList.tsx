@@ -47,7 +47,7 @@ export function MessageList({ messages, isLoading }: Props) {
             prev.role !== "system";
           return <Message key={m.id} message={m} grouped={grouped} />;
         })}
-        {isLoading && (
+        {isLoading && !messages.some((m) => m.streaming) && (
           <div className="mt-4">
             <TypingIndicator />
           </div>

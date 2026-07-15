@@ -77,6 +77,27 @@ def complete_with_tools(model: str, system: str, messages: list[dict],
     )
 
 
+def stream_with_tools(model: str, system: str, messages: list[dict],
+                      tools: list[dict], max_tokens: int = 2048,
+                      temperature: float = 0.7):
+    """
+    One tool-use-capable turn, streamed. Yields ("text", delta) for each text
+    delta as it arrives, then a final ("final", message) carrying the complete
+    assistant message (including any tool_use blocks). Ollama models don't
+    support this tool-streaming path, so callers should use it only for the
+    Anthropic-backed orchestrator.
+    """
+    client = _anthropic_client()
+    with client.messages.stream(
+        model=model, system=system, messages=messages, tools=tools,
+        max_tokens=max_tokens, temperature=temperature,
+    ) as stream:
+        for delta in stream.text_stream:
+            yield ("text", delta)
+        final = stream.get_final_message()
+    yield ("final", final)
+
+
 def describe_image(path: str, prompt: str = "Describe what is visible on this screen, concisely.") -> str:
     """Vision call used by the describe_screen tool."""
     client = _anthropic_client()

@@ -151,3 +151,86 @@ def handle_message(user_message: str) -> str:
         return (f"My reasoning engine isn't configured yet ({exc}). "
                 "Set ANTHROPIC_API_KEY in .env to bring me fully online — "
                 "the dashboard, permission layer, and heartbeat still work.")
+
+
+def _run_tool_uses(final_msg, messages) -> None:
+    """Execute the tool_use blocks from a streamed turn and extend `messages`."""
+    tool_uses = [b for b in final_msg.content if b.type == "tool_use"]
+    messages.append({"role": "assistant", "content": final_msg.content})
+    results = []
+    for tu in tool_uses:
+        if tu.name == "delegate_to_executor":
+            from remy.agents import executor
+            output = executor.run_task((tu.input or {}).get("instruction", ""))
+        elif tu.name == "delegate_to_browser":
+            from remy.agents import browser_agent
+            output = browser_agent.run_browser_task(
+                (tu.input or {}).get("instruction", ""))
+        else:
+            output = toolbox.call_tool(tu.name, tu.input or {})
+        results.append({"type": "tool_result", "tool_use_id": tu.id,
+                        "content": str(output)[:8000]})
+    messages.append({"role": "user", "content": results})
+
+
+def _chunk_text(text: str):
+    """Yield a string word-by-word so the fallback path still streams visibly."""
+    import time
+    parts = text.split(" ")
+    for i, word in enumerate(parts):
+        if i:
+            time.sleep(0.02)  # cosmetic pacing for the non-LLM fallback only
+        yield word if i == 0 else " " + word
+
+
+def stream_message(user_message: str):
+    """
+    Streaming chat entry point (SSE). Generator yielding text tokens as they
+    are produced. Runs the same tool loop as handle_message, streaming text
+    deltas from every turn; tool calls run between turns. Falls back to a
+    chunked offline message when no reasoning model is configured.
+    """
+    system = build_system_prompt(ROLE)
+    try:
+        tools = toolbox.mcp_tool_schemas() + [DELEGATE_TOOL, DELEGATE_BROWSER_TOOL]
+    except Exception:
+        tools = [DELEGATE_TOOL, DELEGATE_BROWSER_TOOL]
+
+    _history.append({"role": "user", "content": user_message})
+    _persist_turn("user", user_message)
+    messages = _history[-40:]
+    reply_parts: list[str] = []
+
+    try:
+        for _ in range(MAX_STEPS):
+            final_msg = None
+            for kind, payload in base.stream_with_tools(
+                    config.ORCHESTRATOR_MODEL, system, messages, tools):
+                if kind == "text":
+                    reply_parts.append(payload)
+                    yield payload
+                else:
+                    final_msg = payload
+
+            has_tools = final_msg is not None and any(
+                b.type == "tool_use" for b in final_msg.content)
+            if not has_tools:
+                reply = "".join(reply_parts)
+                _history.append({"role": "assistant", "content": reply})
+                _persist_turn("assistant", reply)
+                return
+            _run_tool_uses(final_msg, messages)
+
+        final = "I hit my step limit mid-task — here's where things stand; ask me to continue."
+        reply_parts.append(final)
+        yield final
+        reply = "".join(reply_parts)
+        _history.append({"role": "assistant", "content": reply})
+        _persist_turn("assistant", reply)
+
+    except base.LLMUnavailable as exc:
+        # Stream the offline message so the SSE path still works without a key.
+        msg = (f"My reasoning engine isn't configured yet ({exc}). "
+               "Set ANTHROPIC_API_KEY in .env to bring me fully online — "
+               "the dashboard, permission layer, and heartbeat still work.")
+        yield from _chunk_text(msg)

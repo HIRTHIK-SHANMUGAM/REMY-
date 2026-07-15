@@ -7,6 +7,7 @@ export interface ChatMessage {
   role: Role;
   content: string;
   ts: number;
+  streaming?: boolean; // assistant message currently receiving tokens
 }
 
 export type Backend = "online" | "offline" | "checking";
@@ -67,6 +68,31 @@ export function useRemy() {
       const controller = new AbortController();
       abortRef.current = controller;
 
+      // Placeholder assistant message that tokens stream into.
+      const assistantId = uid();
+      let started = false;
+      const ensureAssistant = () => {
+        if (started) return;
+        started = true;
+        setMessages((prev) => [
+          ...prev,
+          { id: assistantId, role: "assistant", content: "", ts: Date.now(), streaming: true },
+        ]);
+      };
+      const appendToken = (text: string) => {
+        ensureAssistant();
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, content: m.content + text } : m
+          )
+        );
+      };
+      const finishAssistant = () => {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === assistantId ? { ...m, streaming: false } : m))
+        );
+      };
+
       try {
         const res = await fetch(`${API_BASE}/api/chat`, {
           method: "POST",
@@ -74,18 +100,46 @@ export function useRemy() {
           body: JSON.stringify({ message: trimmed }),
           signal: controller.signal,
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        const reply =
-          data.reply ?? data.response ?? "(REMY returned an empty response.)";
+        if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
         setBackend("online");
-        setMessages((prev) => [
-          ...prev,
-          { id: uid(), role: "assistant", content: String(reply), ts: Date.now() },
-        ]);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        // Parse the Server-Sent Events stream (events separated by blank line).
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split("\n\n");
+          buffer = events.pop() ?? ""; // keep the trailing partial event
+          for (const evt of events) {
+            const line = evt.split("\n").find((l) => l.startsWith("data:"));
+            if (!line) continue;
+            let payload: { type: string; text?: string; message?: string };
+            try {
+              payload = JSON.parse(line.slice(5).trim());
+            } catch {
+              continue;
+            }
+            if (payload.type === "token") appendToken(payload.text ?? "");
+            else if (payload.type === "error") appendToken(`\n\n_[Error streaming response: ${payload.message ?? "unknown"}]_`);
+          }
+        }
+        finishAssistant();
+        // Empty reply (e.g. immediate error before any token) → surface it.
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId && m.content === ""
+              ? { ...m, content: "(REMY returned an empty response.)" }
+              : m
+          )
+        );
       } catch (err) {
+        finishAssistant();
         const aborted = err instanceof DOMException && err.name === "AbortError";
-        setBackend("offline");
+        setBackend(aborted ? "online" : "offline");
         setMessages((prev) => [
           ...prev,
           {

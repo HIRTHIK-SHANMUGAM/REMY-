@@ -36,11 +36,22 @@ export function MessageList({ messages, isLoading }: Props) {
 
   return (
     <div className="scroll-thin flex-1 overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-6">
-        {messages.map((m) => (
-          <Message key={m.id} message={m} />
-        ))}
-        {isLoading && <TypingIndicator />}
+      <div className="mx-auto flex w-full max-w-3xl flex-col px-4 py-6">
+        {messages.map((m, i) => {
+          const prev = messages[i - 1];
+          // Group consecutive same-role, non-system messages under one avatar.
+          const grouped =
+            !!prev &&
+            prev.role === m.role &&
+            m.role !== "system" &&
+            prev.role !== "system";
+          return <Message key={m.id} message={m} grouped={grouped} />;
+        })}
+        {isLoading && (
+          <div className="mt-4">
+            <TypingIndicator />
+          </div>
+        )}
         <div ref={endRef} />
       </div>
     </div>

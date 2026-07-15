@@ -23,16 +23,10 @@ const API_BASE = window.location.protocol.startsWith("http")
 
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
-const GREETING: ChatMessage = {
-  id: "greeting",
-  role: "assistant",
-  content:
-    "I'm **REMY** — online and listening. Ask me anything, or tell me what you need done.",
-  ts: Date.now(),
-};
-
 export function useRemy() {
-  const [messages, setMessages] = useState<ChatMessage[]>([GREETING]);
+  // Starts empty so the Welcome screen (with suggestion chips) shows on first
+  // run; the first user/assistant turn replaces it with the conversation.
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [backend, setBackend] = useState<Backend>("checking");
   const abortRef = useRef<AbortController | null>(null);
@@ -113,7 +107,7 @@ export function useRemy() {
 
   const resetChat = useCallback(async () => {
     abortRef.current?.abort();
-    setMessages([GREETING]);
+    setMessages([]);
     try {
       await fetch(`${API_BASE}/api/chat/reset`, { method: "POST" });
     } catch {

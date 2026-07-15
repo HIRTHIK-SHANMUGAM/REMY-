@@ -9,19 +9,25 @@ export default {
         accent: {
           DEFAULT: "#3b82f6",
           hover: "#2563eb",
+          from: "#4f8cf7", // gradient start (bubbles, logo)
+          to: "#2f6bd8", // gradient end
           soft: "#1e3a8a",
         },
         surface: {
-          0: "#0b0f14", // app background
-          1: "#111820", // panels / REMY bubbles
-          2: "#1a242f", // raised / input
-          3: "#243040", // borders / hover
+          0: "#0a0e13", // app background (slightly deeper)
+          1: "#111823", // panels / REMY bubbles
+          2: "#19212d", // raised / input
+          3: "#263140", // borders / hover
         },
         ink: {
-          DEFAULT: "#e6edf3",
-          muted: "#8b98a5",
-          faint: "#5b6875",
+          DEFAULT: "#e8eef4",
+          muted: "#95a3b1", // brighter for AA contrast
+          faint: "#6b7a89", // brighter than before (was #5b6875)
         },
+      },
+      boxShadow: {
+        bubble: "0 1px 2px rgba(0,0,0,0.25)",
+        "accent-glow": "0 4px 16px -4px rgba(59,130,246,0.45)",
       },
       fontFamily: {
         sans: [

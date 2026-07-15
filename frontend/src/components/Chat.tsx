@@ -2,6 +2,7 @@ import { RotateCcw } from "lucide-react";
 import { useRemy, type Backend } from "../hooks/useRemy";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
+import { Welcome } from "./Welcome";
 
 function StatusDot({ backend }: { backend: Backend }) {
   const map: Record<Backend, { color: string; label: string }> = {
@@ -21,12 +22,14 @@ function StatusDot({ backend }: { backend: Backend }) {
 export function Chat() {
   const { messages, sendMessage, resetChat, isLoading, backend } = useRemy();
 
+  const isEmpty = messages.length === 0 && !isLoading;
+
   return (
     <div className="flex h-full flex-col bg-surface-0">
       <header className="flex items-center justify-between border-b border-surface-3 bg-surface-1/60 px-4 py-3 backdrop-blur">
         <div className="mx-auto flex w-full max-w-3xl items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent font-bold text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accent-from to-accent-to font-bold text-white shadow-bubble">
               R
             </div>
             <div className="leading-tight">
@@ -48,13 +51,11 @@ export function Chat() {
         </div>
       </header>
 
-      {backend === "offline" && (
-        <div className="bg-red-500/10 px-4 py-2 text-center text-xs text-red-300">
-          REMY is offline — check your connection to the backend on port 8377.
-        </div>
+      {isEmpty ? (
+        <Welcome onPick={sendMessage} />
+      ) : (
+        <MessageList messages={messages} isLoading={isLoading} />
       )}
-
-      <MessageList messages={messages} isLoading={isLoading} />
       <MessageInput onSend={sendMessage} disabled={isLoading} />
     </div>
   );
